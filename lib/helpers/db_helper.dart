@@ -121,4 +121,24 @@ class DBHelper {
 
     return result.map((e) => ReviewModel.fromMap(e)).toList();
   }
+
+  Future<int> updateReview(ReviewModel review) async {
+  final db = await database;
+  return await db.update(
+    'reviews',
+    review.toMap(),
+    where: 'id = ?',
+    whereArgs: [review.id],
+  );
+}
+
+Future<int> deleteReview(int id) async {
+  final db = await database;
+  return await db.delete(
+    'reviews',
+    where: 'id = ?',
+    whereArgs: [id],
+  );
+}
+
 }

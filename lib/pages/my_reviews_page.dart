@@ -25,6 +25,102 @@ class _MyReviewsPageState extends State<MyReviewsPage> {
     setState(() => _reviews = reviews);
   }
 
+  void _showEditDialog(ReviewModel review) {
+    final TextEditingController reviewController =
+        TextEditingController(text: review.review);
+    double updatedRating = review.rating.clamp(0.0, 10.0);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Review'),
+          content: StatefulBuilder(
+              builder: (context, setStateDialog) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: reviewController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Review',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Text('Rating: '),
+                        Expanded(
+                          child: Slider(
+                            value: updatedRating,
+                            onChanged: (val) {
+                              setStateDialog(() {
+                                updatedRating = val;
+                              });
+                            },
+                            divisions: 10,
+                            min: 0,
+                            max: 10,
+                            label: updatedRating.toStringAsFixed(1),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final updated = ReviewModel(
+                  id: review.id,
+                  userId: review.userId,
+                  movieId: review.movieId,
+                  title: review.title,
+                  posterUrl: review.posterUrl,
+                  review: reviewController.text,
+                  rating: updatedRating,
+                );
+
+                await DBHelper().updateReview(updated);
+                Navigator.pop(context);
+                _loadMyReviews();
+              },
+              child: const Text('Simpan'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _deleteReview(int id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus Review'),
+        content: const Text('Yakin ingin menghapus review ini?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Hapus')),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await DBHelper().deleteReview(id);
+      _loadMyReviews();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -57,7 +153,7 @@ class _MyReviewsPageState extends State<MyReviewsPage> {
                     leading: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.network(
-                        review.posterUrl ?? "",
+                        review.posterUrl,
                         width: 60,
                         height: 90,
                         fit: BoxFit.cover,
@@ -91,6 +187,19 @@ class _MyReviewsPageState extends State<MyReviewsPage> {
                                 color: Color(0xFF437057),
                                 fontWeight: FontWeight.w600,
                               ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blueGrey),
+                              onPressed: () => _showEditDialog(review),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => _deleteReview(review.id!),
                             ),
                           ],
                         ),
